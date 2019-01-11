@@ -12,10 +12,10 @@ class ContactModel:
         pass
 
     def init_step(self):
+        """ Initialise step """
         f = np.zeros((self.sim_params["N"], 2))
-        shear_tmp = np.zeros((self.contacts["N"], 2))
         self.particles["f"] = f
-        self.contacts["shear_tmp"] = shear_tmp
+        pass
 
     def update_forces(self):
         self.init_step()
@@ -23,29 +23,31 @@ class ContactModel:
         self.update_body_forces()
         self.update_particle_forces()
         self.add_damping()
-
+        pass
 
     def update_particle_forces(self):
-        """
-        Compute particle-particle interaction forces
-        """
+        """ Compute particle-particle interaction forces """
 
-        N = self.sim_params["N"]
         dt = self.dt
 
+        # Particle related quantities
         coords = self.particles["coords"]
+        offsets = self.contacts["offsets"]
+        r = self.particles["radius"]
         f = self.particles["f"]
         v = self.particles["v"]
         stiff = self.particles["stiffness"]
-        r = self.particles["radius"]
 
+        # Contact related quantities
+        shear = self.contacts["shear"]
+
+        # Bookkeeping arrays
         inds = self.contacts["inds"]
         ptrs = self.contacts["ptrs"]
         lookup = self.contacts["lookup"]
         prime_lookup = self.contacts["prime_lookup"]
         prime_IDs = self.contacts["prime_IDs"]
-        offsets = self.contacts["offsets"]
-        shear = self.contacts["shear"]
+
         N_all = len(lookup)
 
         # Temporary arrays to update contact shear
@@ -54,6 +56,8 @@ class ContactModel:
             "delta_shear": np.zeros_like(shear),
         }
 
+        # Loop over all particles (including ghosts)
+        # Note that this visits each contact twice
         for n in range(N_all):
             neighbours = ptrs[inds[n]:inds[n+1]]
             i = lookup[n]
@@ -114,7 +118,8 @@ class ContactModel:
 
                     """ Contact friction """
 
-                    # Compute contact creep velocity
+                    # Compute contact creep velocity based on
+                    # Chen's friction model
                     vc_ref = self.particles["vc_ref"]
                     inv_sinh_mu_ref = self.particles["inv_sinh_mu_ref"]
                     a_tilde = self.particles["a_tilde"]
@@ -130,6 +135,10 @@ class ContactModel:
                     # Store contact normal in temporary array
                     temp["contact_normal"][contact_no][0] = nx.copy()
                     temp["contact_normal"][contact_no][1] = ny.copy()
+
+                    """ Pressure solution """
+
+                    # TODO
 
                     """ Particle forces """
 
@@ -229,6 +238,5 @@ class ContactModel:
         sign_v = np.sign(v)
 
         f -= self.sim_params["damping_factor"]*np.abs(f)*sign_v
-
         pass
 

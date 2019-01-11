@@ -50,6 +50,6 @@ class Integrator:
         E_kin = 0.5*m*v[:, 1]**2
         E_pot = 9.81*m*x[:, 1]
 
-        print((E_kin + E_pot).sum())
+        return (E_kin + E_pot).sum()
 
 
