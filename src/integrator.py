@@ -2,9 +2,11 @@
 Time/position integration routine
 """
 
-import numpy as np
 
 class Integrator:
+
+    step = 0
+    t = 0.0
 
     def __init__(self):
         pass
@@ -14,9 +16,11 @@ class Integrator:
         self.verlet_integration("x")
         self.update_forces()
         self.verlet_integration("v")
+        self.move_wall()
         # self.compute_energy()
         self.check_remesh()
-        # self.euler_integration()
+        self.step += 1
+        self.t += self.dt
 
         pass
 

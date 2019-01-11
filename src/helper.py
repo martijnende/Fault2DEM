@@ -53,3 +53,31 @@ class Elves:
         self.dt = self.dt_factor * sqrt(r.min()**3)
         return self.dt
 
+    # https://rosettacode.org/wiki/Sieve_of_Eratosthenes#Infinite_generator_with_a_faster_algorithm
+    def primes(self):
+        yield 2
+        yield 3
+        yield 5
+        yield 7
+        bps = (p for p in self.primes())
+        p = next(bps) and next(bps)
+        q = p * p
+        sieve = {}
+        n = 9
+        while True:
+            if n not in sieve:
+                if n < q:
+                    yield n
+                else:
+                    p2 = p + p
+                    sieve[q + p2] = p2
+                    p = next(bps)
+                    q = p * p
+            else:
+                s = sieve.pop(n)
+                nxt = n + s
+                while nxt in sieve:
+                    nxt += s
+                sieve[nxt] = s
+            n += 2
+
