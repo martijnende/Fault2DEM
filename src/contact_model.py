@@ -50,12 +50,6 @@ class ContactModel:
 
         N_all = len(lookup)
 
-        # Temporary arrays to update contact shear
-        temp = {
-            "contact_normal": np.zeros_like(shear),
-            "delta_shear": np.zeros_like(shear),
-        }
-
         # Loop over all particles (including ghosts)
         # Note that this visits each contact twice
         for n in range(N_all):
@@ -77,7 +71,9 @@ class ContactModel:
                 if delta_sq > 0:
 
                     # Identify contact
-                    contact_id = prime_IDs[i] * prime_IDs[j]
+                    prime_i = prime_IDs[i]
+                    prime_j = prime_IDs[j]
+                    contact_id = prime_i * prime_j
                     contact_no = prime_lookup[contact_id]
 
                     # Extract shear history
@@ -115,26 +111,60 @@ class ContactModel:
                     # Shear force
                     fsx = -stiff * shear_ij[0]
                     fsy = -stiff * shear_ij[1]
+                    # Change sign of fs for other contact
 
                     """ Contact friction """
 
-                    # Compute contact creep velocity based on
-                    # Chen's friction model
-                    vc_ref = self.particles["vc_ref"]
-                    inv_sinh_mu_ref = self.particles["inv_sinh_mu_ref"]
-                    a_tilde = self.particles["a_tilde"]
-                    inv_afn = 1.0 / (a_tilde * fn)
-                    vcx = vc_ref * sinh(fsx * inv_afn) * inv_sinh_mu_ref
-                    vcy = vc_ref * sinh(fsy * inv_afn) * inv_sinh_mu_ref
+                    # Compute/store contact friction for smallest particle ID
+                    if prime_i < prime_j:
 
-                    # Increment shear deficit
-                    # Note factor 0.5 to prevent double counting
-                    # Store contact shear in temporary array
-                    temp["delta_shear"][contact_no][0] += 0.5 * (vsx - vcx) * dt
-                    temp["delta_shear"][contact_no][1] += 0.5 * (vsy - vcy) * dt
-                    # Store contact normal in temporary array
-                    temp["contact_normal"][contact_no][0] = nx.copy()
-                    temp["contact_normal"][contact_no][1] = ny.copy()
+                        # Tangent creep direction (parallel to shear force)
+                        fs = sqrt(fsx**2 + fsy**2)
+                        lx = 0
+                        ly = 0
+                        if fs > 0:
+                            lx = fsx / fs
+                            ly = fsy / fs
+
+                        # Compute contact creep velocity based on
+                        # Chen's friction model
+                        vc_ref = self.particles["vc_ref"]
+                        inv_sinh_mu_ref = self.particles["inv_sinh_mu_ref"]
+                        a_tilde = self.particles["a_tilde"]
+                        vc = - vc_ref * sinh(fs / (a_tilde*fn)) * inv_sinh_mu_ref
+                        vcx = vc * lx
+                        vcy = vc * ly
+
+                        # Increment shear deficit
+                        shear_ij[0] += (vsx - vcx) * dt
+                        shear_ij[1] += (vsy - vcy) * dt
+
+                        self.contacts["forces"][contact_no][0] = fs
+                        self.contacts["forces"][contact_no][1] = fn
+
+                        """ Rotate shear displacements onto contact plane """
+
+                        # Compute original shear magnitude
+                        shear_mag = shear_ij[0]**2 + shear_ij[1]**2
+
+                        # Compute normal component of shear vector
+                        shear_normal = shear_ij[0] * nx + shear_ij[1] * ny
+
+                        # Subtract normal component (gives tangential component)
+                        shear_ij[0] -= shear_normal * nx
+                        shear_ij[1] -= shear_normal * ny
+
+                        # Compute updated shear magnitude
+                        shear_mag_new = shear_ij[0]**2 + shear_ij[1]**2
+
+                        if shear_mag * shear_mag_new > 0:
+                            # Conserve shear magnitude
+                            shear_ratio = sqrt(shear_mag / shear_mag_new)
+                            shear_ij *= shear_ratio
+                    # Change sign of shear force for "other" particle
+                    else:
+                        fsx *= -1
+                        fsy *= -1
 
                     """ Pressure solution """
 
@@ -145,36 +175,6 @@ class ContactModel:
                     # Increment particle forces
                     f[i][0] += fnx + fsx
                     f[i][1] += fny + fsy
-
-        # Perform a second loop, this time over all contacts, and update
-        # the contact shear deficit
-        for i in range(len(shear)):
-
-            # Contact normal components
-            nx, ny = temp["contact_normal"][i]
-
-            # Increment contact shear
-            shear_ij = shear[i] + temp["delta_shear"][i]
-
-            """ Rotate shear displacements onto contact plane """
-
-            # Compute original shear magnitude
-            shear_mag = shear_ij[0]**2 + shear_ij[1]**2
-
-            # Compute normal component of shear vector
-            shear_normal = shear_ij[0] * nx + shear_ij[1] * ny
-
-            # Subtract normal component (gives tangential component)
-            shear_ij[0] -= shear_normal * nx
-            shear_ij[1] -= shear_normal * ny
-
-            # Compute updated shear magnitude
-            shear_mag_new = shear_ij[0]**2 + shear_ij[1]**2
-
-            if shear_mag * shear_mag_new > 0:
-                # Conserve shear magnitude
-                shear_ratio = sqrt(shear_mag / shear_mag_new)
-                shear_ij *= shear_ratio
         pass
 
     def update_body_forces(self):

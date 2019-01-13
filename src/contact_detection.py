@@ -91,6 +91,8 @@ class MeshDetection:
             "prime_lookup": prime_lookup,
             "prime_IDs": prime_IDs,
             "shear": np.zeros((N_contacts, 2)),
+            "forces": np.zeros((N_contacts, 2)),
+            "tri": tri,
         }
 
         return True
@@ -114,7 +116,7 @@ class MeshDetection:
         points = self.contacts["points"][:N]
 
         d = np.abs((coords - points).ravel())
-        if d.max() > 0.5*self.particles["r_min"]:
+        if d.max() > 0.25*self.particles["r_min"]:
             # print("remesh")
             self.relocate_particles()
             self.write_history()
