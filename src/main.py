@@ -35,7 +35,7 @@ class Fault2Dem(ContactModel, Elves, Integrator, MeshDetection,
             "damping_factor": params["damping_factor"],
             "gravity": params["gravity"],
             "drag": params["drag"],
-            "strain_rate": params["strain_rate"],
+            "v_lp": params["v_lp"],
         }
         self.output_params = {
             "screen_output": params["screen_output"],
@@ -139,4 +139,5 @@ class Fault2Dem(ContactModel, Elves, Integrator, MeshDetection,
                 saved_data.append(data)
             self.do_step()
         self.saved_data = saved_data
+        print()
         pass

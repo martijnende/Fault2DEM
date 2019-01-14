@@ -11,11 +11,13 @@ class WallControler:
 
     def init_wall(self):
 
+        # WARNING: re-run with different params does not update wall params!
+
         self.wall = {
             "x": self.sim_params["box"][1],
             "v": 0.0,
             "f": 0.0,
-            "k": self.user_params["servo_k"],
+            "k": self.user_params["servo_k"] / self.user_params["f_target"],
             "f_target": self.user_params["f_target"],
         }
         self.wall["k"] *= self.wall["f_target"]

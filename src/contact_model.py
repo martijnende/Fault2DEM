@@ -124,8 +124,18 @@ class ContactModel:
                         s_ratio = 1.0
 
                         if fs > 0:
-                            # Compute contact creep velocity based on
-                            # Chen's friction model
+                            # Compute contact creep velocity based on Chen's
+                            # friction model. A purely forward approach is
+                            # highly unstable owing to the sinh/exponential
+                            # dependence on stress. Instead, the shear creep
+                            # (relaxation) is computed incrementally from an
+                            # analytical solution for:
+                            #   ds/dx = - vc_ref * exp([mu(s) - mu_ref] / a)
+                            # The new value of s(t + dt) is computed, and the
+                            # shear_ij vector is "shortened" by a ratio
+                            # s(t + dt) / s(t). Then, the contribution from
+                            # elastic shear loading (vs * dt) is added.
+
                             vc_ref = self.particles["vc_ref"]
                             mu_ref = self.particles["mu_ref"]
                             a_tilde = self.particles["a_tilde"]
@@ -174,7 +184,13 @@ class ContactModel:
 
                     """ Pressure solution """
 
-                    # TODO
+                    if prime_i < prime_j:
+
+                        if fn > 0:
+                            r1_sq = r1**2
+                            r2_sq = r2**2
+                            rc_sq = r1_sq - 1.0 / (4.0 * d_sq) * (d_sq - r2_sq + r1_sq)*(d_sq - r2_sq + r1_sq)
+
 
                     """ Particle forces """
 
@@ -194,19 +210,25 @@ class ContactModel:
         coords = self.particles["coords"]
         dx = self.particles["shear_dist"]
         y_max = coords[:, 1].max()
+        y_min = coords[:, 1].min()
+        y_med = 0.5*(y_max + y_min)
+        r_max = self.particles["r_max"]
 
         # Gravitational pull
         if np.abs(self.sim_params["gravity"]) > 0:
             f[:, 1] += self.sim_params["gravity"] * m
 
         # Shear drag
-        if self.sim_params["drag"] * self.sim_params["strain_rate"] > 0:
+        if self.sim_params["drag"] * self.sim_params["v_lp"] > 0:
             # Compute position-based load-point velocity
             # (zero at middle of the sample)
-            v_lp = self.sim_params["strain_rate"] * (coords[:, 1] - 0.5*y_max)
+            v_lp = self.sim_params["v_lp"]
+            v_top_layer = v[coords[:, 1] > y_max - r_max].mean()
+            v_bot_layer = v[coords[:, 1] < y_min + r_max].mean()
+            vs = v_top_layer - v_bot_layer
 
             # Update load-point displacements
-            dx += (v_lp - v[:, 0]) * self.dt
+            dx += (v_lp - vs) * self.dt * (coords[:, 1] - y_med) / (y_max - y_min)
 
             # Add shear drag
             f[:, 0] += self.sim_params["drag"] * dx
