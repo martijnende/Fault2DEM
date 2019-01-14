@@ -132,7 +132,10 @@ class Fault2Dem(ContactModel, Elves, Integrator, MeshDetection,
             if i % output["screen_output"] == 0:
                 self.screen_write()
             if i % output["file_output"] == 0:
-                data = {"particles": copy.deepcopy(self.particles)}
+                data = {
+                    "particles": copy.deepcopy(self.particles),
+                    "contacts": copy.deepcopy(self.contacts),
+                }
                 saved_data.append(data)
             self.do_step()
         self.saved_data = saved_data

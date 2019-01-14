@@ -3,7 +3,7 @@
 """
 
 import numpy as np
-from math import sqrt, sinh
+from math import sqrt, sinh, exp, log, tanh, atanh
 
 
 class ContactModel:
@@ -121,24 +121,29 @@ class ContactModel:
 
                         # Tangent creep direction (parallel to shear force)
                         fs = sqrt(fsx**2 + fsy**2)
-                        lx = 0
-                        ly = 0
+                        s_ratio = 1.0
+
                         if fs > 0:
-                            lx = fsx / fs
-                            ly = fsy / fs
+                            # Compute contact creep velocity based on
+                            # Chen's friction model
+                            vc_ref = self.particles["vc_ref"]
+                            mu_ref = self.particles["mu_ref"]
+                            a_tilde = self.particles["a_tilde"]
 
-                        # Compute contact creep velocity based on
-                        # Chen's friction model
-                        vc_ref = self.particles["vc_ref"]
-                        inv_sinh_mu_ref = self.particles["inv_sinh_mu_ref"]
-                        a_tilde = self.particles["a_tilde"]
-                        vc = - vc_ref * sinh(fs / (a_tilde*fn)) * inv_sinh_mu_ref
-                        vcx = vc * lx
-                        vcy = vc * ly
+                            # Current shear deficit
+                            z0 = exp(- (fs / fn - mu_ref) / a_tilde)
+                            z = stiff * vc_ref * dt / (a_tilde * fn)
 
-                        # Increment shear deficit
-                        shear_ij[0] += (vsx - vcx) * dt
-                        shear_ij[1] += (vsy - vcy) * dt
+                            # Shear deficit after relaxation by creep
+                            s0 = fs / stiff
+                            s = (fn / stiff) * (mu_ref - a_tilde*np.log(z + z0))
+                            if s0 < s:
+                                s_ratio = 1
+                            else:
+                                s_ratio = s / s0
+
+                        shear_ij[0] = shear_ij[0] * s_ratio + vsx * dt
+                        shear_ij[1] = shear_ij[1] * s_ratio + vsy * dt
 
                         self.contacts["forces"][contact_no][0] = fs
                         self.contacts["forces"][contact_no][1] = fn

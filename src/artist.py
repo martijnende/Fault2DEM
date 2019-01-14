@@ -56,10 +56,10 @@ class Rembrandt:
     def update_canvas(self, n):
 
         N = self.sim_params["N"]
-        N_ghosts = len(self.contacts["lookup"]) - N
         particles = self.saved_data[n]["particles"]
         contacts = self.saved_data[n]["contacts"]
         lookup = contacts["lookup"]
+        N_ghosts = len(contacts["lookup"]) - N
         offsets = contacts["offsets"]
 
         self.canvas.cla()

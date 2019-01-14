@@ -94,6 +94,7 @@ mu = np.zeros_like(t)
 mu_ss = particles["a_tilde"]*asinh(vy_p[0] / (particles["vc_ref"] * inv_sinh))
 
 for i in range(len(t)):
+    DEM.t = t[i]
     DEM.particles["coords"][1] = x_p[i], y_p[i]
     DEM.particles["v"][1] = vx_p[i], vy_p[i]
     DEM.check_remesh()
@@ -112,6 +113,7 @@ for i in range(len(t)):
     fs, fn = DEM.contacts["forces"][0]
     mu[i] = fs / fn
 
+
 DEM.dt *= 2
 t2 = np.linspace(0, np.pi, 20000)
 dt = t2[1] - t2[0]
@@ -126,8 +128,10 @@ vy_p = -10*R_p*np.cos(np.pi - 10*t2)
 s2 = np.zeros_like(t2)
 mu2 = np.zeros_like(t2)
 mu_ss2 = particles["a_tilde"]*asinh(vy_p[0] / (particles["vc_ref"] * inv_sinh))
+mu_ss2 = particles["mu_ref"] + particles["a_tilde"] * np.log(vy_p[0] / particles["vc_ref"])
 
 for i in range(len(t)):
+    DEM.t = t[i]
     DEM.particles["coords"][1] = x_p[i], y_p[i]
     DEM.particles["v"][1] = vx_p[i], vy_p[i]
     DEM.check_remesh()
@@ -146,13 +150,13 @@ for i in range(len(t)):
     fs, fn = DEM.contacts["forces"][0]
     mu2[i] = fs / fn
 
-DEM.animate(tri=True)
+# DEM.animate(tri=True)
 
 plt.subplot(211)
 plt.axhline(mu_ss, ls="--", c="k")
 plt.axhline(mu_ss2, ls="--", c="k")
-plt.plot(t, mu)
-plt.plot(t2+t[-1], mu2)
+plt.plot(t, mu, ".-")
+plt.plot(t2+t[-1], mu2, ".-")
 plt.subplot(212)
 plt.plot(t, s)
 plt.plot(t2+t[-1], s2)
