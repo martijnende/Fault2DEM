@@ -49,6 +49,7 @@ class Fault2Dem(ContactModel, Elves, Integrator, MeshDetection,
         self.init_box()
         self.init_wall()
         self.init_sample()
+        self.render_mesh()
 
         self.compute_dt_factor()
         # self.compute_dt_max()

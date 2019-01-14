@@ -116,6 +116,7 @@ class ContactModel:
                     """ Contact friction """
 
                     # Compute/store contact friction for smallest particle ID
+
                     if prime_i < prime_j:
 
                         # Tangent creep direction (parallel to shear force)
