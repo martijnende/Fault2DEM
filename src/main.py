@@ -72,6 +72,8 @@ class Fault2Dem(ContactModel, Elves, Integrator, MeshDetection,
             "r_max": params["r_max"],
             "density": params["density"],
             "stiffness": params["stiffness"],
+            "Z_ps": params["Z_ps"],
+            "mu": params["mu"],
             "radius": radii,
             "mass": m,
             "inv_mass": inv_m,
@@ -82,11 +84,9 @@ class Fault2Dem(ContactModel, Elves, Integrator, MeshDetection,
             "shear_dist": np.zeros(N),
         }
 
-        inv_sinh_mu_ref = 1.0 / sinh(params["mu_ref"] / params["a_tilde"])
         particles["a_tilde"] = params["a_tilde"]
         particles["mu_ref"] = params["mu_ref"]
         particles["vc_ref"] = params["vc_ref"]
-        particles["inv_sinh_mu_ref"] = inv_sinh_mu_ref
 
         i = 0
         fail_count = 0

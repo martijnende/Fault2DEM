@@ -76,6 +76,8 @@ particles = {
     "vc_ref": 1.0,
     "mu_ref": 0.6,
     "a_tilde": 0.005,
+    "mu": 0.6,
+    "Z_ps": 0.0,
 }
 
 output_step = 20
@@ -108,7 +110,7 @@ for i in range(len(t)):
         }
         DEM.saved_data.append(data)
 
-    sx, sy = DEM.contacts["shear"][0]
+    sx, sy, delta = DEM.contacts["shear"][0]
     s[i] = np.sqrt(sx**2 + sy**2)
     fs, fn = DEM.contacts["forces"][0]
     mu[i] = fs / fn
@@ -145,7 +147,7 @@ for i in range(len(t)):
         }
         DEM.saved_data.append(data)
 
-    sx, sy = DEM.contacts["shear"][0]
+    sx, sy, delta = DEM.contacts["shear"][0]
     s2[i] = np.sqrt(sx**2 + sy**2)
     fs, fn = DEM.contacts["forces"][0]
     mu2[i] = fs / fn

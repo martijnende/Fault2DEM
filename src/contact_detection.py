@@ -90,7 +90,7 @@ class MeshDetection:
             "offsets": offsets,
             "prime_lookup": prime_lookup,
             "prime_IDs": prime_IDs,
-            "shear": np.zeros((N_contacts, 2)),
+            "shear": np.zeros((N_contacts, 3)),
             "forces": np.zeros((N_contacts, 2)),
             "tri": tri,
         }

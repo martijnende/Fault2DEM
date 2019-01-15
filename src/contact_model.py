@@ -37,6 +37,8 @@ class ContactModel:
         f = self.particles["f"]
         v = self.particles["v"]
         stiff = self.particles["stiffness"]
+        Z_ps = self.particles["Z_ps"]
+        mu = self.particles["mu"]
 
         # Contact related quantities
         shear = self.contacts["shear"]
@@ -103,8 +105,11 @@ class ContactModel:
                     # Particle overlap
                     delta = sqrt(delta_sq)
 
+                    # Dissolved amount
+                    delta_ps = shear_ij[2]
+
                     # Normal force
-                    fn = stiff * delta
+                    fn = stiff * (delta - delta_ps)
                     fnx = fn * nx
                     fny = fn * ny
 
@@ -123,7 +128,8 @@ class ContactModel:
                         fs = sqrt(fsx**2 + fsy**2)
                         s_ratio = 1.0
 
-                        if fs > 0:
+                        # Problem combination IPS/contact friction?
+                        if (fs > 10) and (fn > 10):
                             # Compute contact creep velocity based on Chen's
                             # friction model. A purely forward approach is
                             # highly unstable owing to the sinh/exponential
@@ -155,6 +161,22 @@ class ContactModel:
                         shear_ij[0] = shear_ij[0] * s_ratio + vsx * dt
                         shear_ij[1] = shear_ij[1] * s_ratio + vsy * dt
 
+                        # shear_ij[0] += vsx * dt
+                        # shear_ij[1] += vsy * dt
+                        #
+                        # fsx = -stiff * shear_ij[0]
+                        # fsy = -stiff * shear_ij[1]
+                        # fs = sqrt(fsx**2 + fsy**2)
+                        #
+                        # if fs > mu * fn:
+                        #     if fs != 0.0:
+                        #         f_ratio = mu * fn / fs
+                        #         shear_ij[0] *= f_ratio
+                        #         shear_ij[1] *= f_ratio
+                        #         fsx *= f_ratio
+                        #         fsy *= f_ratio
+                        #         # fs *= f_ratio
+
                         self.contacts["forces"][contact_no][0] = fs
                         self.contacts["forces"][contact_no][1] = fn
 
@@ -176,7 +198,8 @@ class ContactModel:
                         if shear_mag * shear_mag_new > 0:
                             # Conserve shear magnitude
                             shear_ratio = sqrt(shear_mag / shear_mag_new)
-                            shear_ij *= shear_ratio
+                            shear_ij[0] *= shear_ratio
+                            shear_ij[1] *= shear_ratio
                     # Change sign of shear force for "other" particle
                     else:
                         fsx *= -1
@@ -186,17 +209,26 @@ class ContactModel:
 
                     if prime_i < prime_j:
 
-                        if fn > 0:
+                        if fn * Z_ps > 0:
+
+                            # Contact plane radius
                             r1_sq = r1**2
                             r2_sq = r2**2
-                            rc_sq = r1_sq - 1.0 / (4.0 * d_sq) * (d_sq - r2_sq + r1_sq)*(d_sq - r2_sq + r1_sq)
+                            rc_sq = r1_sq - 1.0 / (4.0 * d_sq) * (d_sq - r2_sq + r1_sq)**2
 
+                            # Pressure solution rate
+                            PS_rate = 2.0 * Z_ps * fn / (np.pi * rc_sq**2)
+                            if PS_rate * dt >= delta:
+                                shear_ij[2] = 0.0
+                            else:
+                                shear_ij[2] += PS_rate * dt
 
                     """ Particle forces """
 
                     # Increment particle forces
                     f[i][0] += fnx + fsx
                     f[i][1] += fny + fsy
+                    # self.contacts["shear"][contact_no] = shear_ij
         pass
 
     def update_body_forces(self):
@@ -212,6 +244,7 @@ class ContactModel:
         y_max = coords[:, 1].max()
         y_min = coords[:, 1].min()
         y_med = 0.5*(y_max + y_min)
+        height = y_max - y_min
         r_max = self.particles["r_max"]
 
         # Gravitational pull
@@ -223,12 +256,8 @@ class ContactModel:
             # Compute position-based load-point velocity
             # (zero at middle of the sample)
             v_lp = self.sim_params["v_lp"]
-            v_top_layer = v[coords[:, 1] > y_max - r_max].mean()
-            v_bot_layer = v[coords[:, 1] < y_min + r_max].mean()
-            vs = v_top_layer - v_bot_layer
-
-            # Update load-point displacements
-            dx += (v_lp - vs) * self.dt * (coords[:, 1] - y_med) / (y_max - y_min)
+            v_lp_y = v_lp * (coords[:, 1] - y_med) / height
+            dx += (v_lp_y - v[:, 0]) * self.dt
 
             # Add shear drag
             f[:, 0] += self.sim_params["drag"] * dx
